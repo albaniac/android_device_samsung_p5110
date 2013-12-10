@@ -31,3 +31,7 @@ PRODUCT_PACKAGES += \
 
 # Use the non-open-source parts, if they're present
 $(call inherit-product-if-exists, vendor/samsung/p51xx/p5110-vendor.mk)
+
+# twrp.fstab
+PRODUCT_COPY_FILES += \
+	device/samsung/p5110/twrp.fstab:recovery/root/etc/twrp.fstab
