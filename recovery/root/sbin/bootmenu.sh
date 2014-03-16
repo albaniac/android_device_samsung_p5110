@@ -1,23 +1,40 @@
 #!/sbin/sh
 
-# Ketut P. Kumajaya, May 2013
-# Ketut P. Kumajaya, Dec 2013
+# Ketut P. Kumajaya, May 2013, Nov 2013, Mar 2014
+# Do not remove above credits header!
+
+DEFAULTROM=0
+
+# Galaxy Tab 2 block device
+# Don't use /dev/block/platform/*/by-name/* symlink!
+SYSTEMDEV="/dev/block/mmcblk0p9"
+DATADEV="/dev/block/mmcblk0p10"
+CACHEDEV="/dev/block/mmcblk0p7"
+HIDDENDEV="/dev/block/mmcblk0p11"
+
+# Galaxy Tab 3 T31x block device
+# Don't use /dev/block/platform/*/by-name/* symlink!
+# SYSTEMDEV="/dev/block/mmcblk0p20"
+# DATADEV="/dev/block/mmcblk0p21"
+# CACHEDEV="/dev/block/mmcblk0p19"
+# HIDDENDEV="/dev/block/mmcblk0p16"
+
+# Set CPU governor, NEXT kernel for Galaxy Tab 2 default governor is performance
+echo interactive > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+
+# Rotate touchscreen orientation, for Galaxy Tab 2 P31xx
+# echo 0 > /sys/devices/virtual/sec/tsp/pivot
 
 # Waiting for kernel init process
 sleep 1
 busybox mount -o remount,rw /
 
 mkdir /.secondrom
-busybox mount -t ext4 /dev/block/mmcblk0p10 /.secondrom
-
-DEFAULTROM=0
-
-echo interactive > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
-# echo 0 > /sys/devices/virtual/sec/tsp/pivot
+busybox mount -t ext4 $DATADEV /.secondrom
 
 if [ -f /.secondrom/media/.secondrom/system.img ]; then
   aroma 1 0 /res/misc/bootmenu.zip
-  # clear framebuffer device
+  # Clear framebuffer device
   dd if=/dev/zero of=/dev/graphics/fb0
   DEFAULTROM=`cat /.secondrom/media/.defaultrecovery`
 fi
@@ -31,10 +48,12 @@ if [ "$DEFAULTROM" == "1" ]; then
   chmod 755 /sbin/umount
 
   losetup /dev/block/loop0 /.secondrom/media/.secondrom/system.img
-  rm -f /dev/block/mmcblk0p9
-  rm -f /dev/block/mmcblk0p7
-  ln -s /dev/block/loop0 /dev/block/mmcblk0p9
-  ln -s /dev/block/mmcblk0p11 /dev/block/mmcblk0p7
+  # Remove default /system and /cache block device
+  rm -f $SYSTEMDEV $CACHEDEV
+  # Symlink /system block device to /dev/block/loop0
+  ln -s /dev/block/loop0 $SYSTEMDEV
+  # Symlink /cache block device to /preload block device
+  ln -s $HIDDENDEV $CACHEDEV
 
   mkdir -p /.secondrom/media/.secondrom/data
   busybox mount --bind /.secondrom/media/.secondrom/data /data
@@ -43,13 +62,11 @@ if [ "$DEFAULTROM" == "1" ]; then
 
   if [ ! -f /data/philz-touch/philz-touch_6.ini ]; then
     mkdir -p /data/philz-touch
-    echo "menu_height=16" > /data/philz-touch/philz-touch_6.ini
     echo "menu_text_color=4" >> /data/philz-touch/philz-touch_6.ini
   fi
 else
   if [ ! -f /.secondrom/philz-touch/philz-touch_6.ini ]; then
     mkdir -p /.secondrom/philz-touch
-    echo "menu_height=16" > /.secondrom/philz-touch/philz-touch_6.ini
   fi
   busybox umount -f /.secondrom
 fi
